@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `lib/cli/src/commands/run/wasi.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>wasi.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" href="https://wasmer.io/images/icons/favicon-32x32.png"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../wasmer_cli/index.html"><div class="logo-container"><img src="https://github.com/wasmerio.png?size=200" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../wasmer_cli/index.html"><div class="logo-container">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `lib/cli/src/commands/run/wasi.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>wasi.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" href="https://wasmer.io/images/icons/favicon-32x32.png"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../wasmer_cli/index.html"><div class="logo-container"><img src="https://github.com/wasmerio.png?size=200" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../wasmer_cli/index.html"><div class="logo-container">
                     <img src="https://github.com/wasmerio.png?size=200" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../wasmer_cli/index.html">
                         <img src="https://github.com/wasmerio.png?size=200" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
@@ -145,150 +145,912 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils</span>::{<span class="ident">parse_envvar</span>, <span class="ident">parse_mapdir</span>};
-<span class="kw">use</span> <span class="ident">anyhow::Result</span>;
-<span class="kw">use</span> <span class="ident">std::collections::BTreeSet</span>;
-<span class="kw">use</span> <span class="ident">std::path::PathBuf</span>;
-<span class="kw">use</span> <span class="ident">wasmer</span>::{<span class="ident">AsStoreMut</span>, <span class="ident">FunctionEnv</span>, <span class="ident">Instance</span>, <span class="ident">Module</span>, <span class="ident">RuntimeError</span>, <span class="ident">Value</span>};
-<span class="kw">use</span> <span class="ident">wasmer_wasi</span>::{
-    <span class="ident">get_wasi_versions</span>, <span class="ident">import_object_for_all_wasi_versions</span>, <span class="ident">is_wasix_module</span>,
-    <span class="ident">wasi_import_shared_memory</span>, <span class="ident">WasiEnv</span>, <span class="ident">WasiError</span>, <span class="ident">WasiState</span>, <span class="ident">WasiVersion</span>,
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+</pre><pre class="rust"><code><span class="kw">use </span>std::{
+    collections::{BTreeSet, HashMap},
+    path::{Path, PathBuf},
+    sync::{mpsc::Sender, Arc},
 };
 
-<span class="kw">use</span> <span class="ident">clap::Parser</span>;
+<span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>bytes::Bytes;
+<span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>tokio::runtime::Handle;
+<span class="kw">use </span>url::Url;
+<span class="kw">use </span>virtual_fs::{DeviceFile, FileSystem, PassthruFileSystem, RootFileSystemBuilder};
+<span class="kw">use </span>wasmer::{Engine, Function, Instance, Memory32, Memory64, Module, RuntimeError, Store, Value};
+<span class="kw">use </span>wasmer_wasix::{
+    bin_factory::BinaryPackage,
+    default_fs_backing, get_wasi_versions,
+    http::HttpClient,
+    os::{tty_sys::SysTty, TtyBridge},
+    rewind_ext,
+    runners::MappedDirectory,
+    runtime::{
+        module_cache::{FileSystemCache, ModuleCache},
+        package_loader::{BuiltinPackageLoader, PackageLoader},
+        resolver::{
+            FileSystemSource, InMemorySource, MultiSource, PackageSpecifier, Source, WapmSource,
+            WebSource,
+        },
+        task_manager::tokio::TokioTaskManager,
+    },
+    types::__WASI_STDIN_FILENO,
+    wasmer_wasix_types::wasi::Errno,
+    PluggableRuntime, RewindState, Runtime, WasiEnv, WasiEnvBuilder, WasiError, WasiFunctionEnv,
+    WasiVersion,
+};
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Parser</span>, <span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
-<span class="doccomment">/// WASI Options</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Wasi</span> {
-    <span class="doccomment">/// WASI pre-opened directory</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;dir&quot;</span>, <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;DIR&quot;</span>, <span class="ident">group</span> <span class="op">=</span> <span class="string">&quot;wasi&quot;</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">pre_opened_directories</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PathBuf</span><span class="op">&gt;</span>,
+<span class="kw">use </span><span class="kw">crate</span>::utils::{parse_envvar, parse_mapdir};
 
-    <span class="doccomment">/// Map a host directory to a different location for the Wasm module</span>
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;mapdir&quot;</span>,
-        <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;GUEST_DIR:HOST_DIR&quot;</span>,
-        <span class="ident">parse</span>(<span class="ident">try_from_str</span> <span class="op">=</span> <span class="ident">parse_mapdir</span>),
-    )]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">mapped_dirs</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">PathBuf</span>)<span class="op">&gt;</span>,
+<span class="kw">use </span><span class="kw">super</span>::RunWithPathBuf;
 
-    <span class="doccomment">/// Pass custom environment variables</span>
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;env&quot;</span>,
-        <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;KEY=VALUE&quot;</span>,
-        <span class="ident">parse</span>(<span class="ident">try_from_str</span> <span class="op">=</span> <span class="ident">parse_envvar</span>),
-    )]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">env_vars</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">String</span>)<span class="op">&gt;</span>,
+<span class="attribute">#[derive(Debug, Parser, Clone, Default)]
+</span><span class="doccomment">/// WASI Options
+</span><span class="kw">pub struct </span>Wasi {
+    <span class="doccomment">/// WASI pre-opened directory
+    </span><span class="attribute">#[clap(long = <span class="string">&quot;dir&quot;</span>, name = <span class="string">&quot;DIR&quot;</span>, group = <span class="string">&quot;wasi&quot;</span>)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) pre_opened_directories: Vec&lt;PathBuf&gt;,
 
-    <span class="doccomment">/// Enable experimental IO devices</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;experimental-io-devices&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(
-        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;experimental-io-devices&quot;</span>,
-        <span class="ident">clap</span>(<span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;enable-experimental-io-devices&quot;</span>)
-    )]</span>
-    <span class="ident">enable_experimental_io_devices</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Map a host directory to a different location for the Wasm module
+    </span><span class="attribute">#[clap(
+        long = <span class="string">&quot;mapdir&quot;</span>,
+        name = <span class="string">&quot;GUEST_DIR:HOST_DIR&quot;</span>,
+        value_parser=parse_mapdir,
+    )]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) mapped_dirs: Vec&lt;MappedDirectory&gt;,
 
-    <span class="doccomment">/// Allow WASI modules to import multiple versions of WASI without a warning.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;allow-multiple-wasi-versions&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">allow_multiple_wasi_versions</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Pass custom environment variables
+    </span><span class="attribute">#[clap(
+        long = <span class="string">&quot;env&quot;</span>,
+        name = <span class="string">&quot;KEY=VALUE&quot;</span>,
+        value_parser=parse_envvar,
+    )]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) env_vars: Vec&lt;(String, String)&gt;,
 
-    <span class="doccomment">/// Require WASI modules to only import 1 version of WASI.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span> <span class="op">=</span> <span class="string">&quot;deny-multiple-wasi-versions&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">deny_multiple_wasi_versions</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Forward all host env variables to the wcgi task.
+    </span><span class="attribute">#[clap(long, env)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) forward_host_env: bool,
+
+    <span class="doccomment">/// List of other containers this module depends on
+    </span><span class="attribute">#[clap(long = <span class="string">&quot;use&quot;</span>, name = <span class="string">&quot;USE&quot;</span>)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) uses: Vec&lt;String&gt;,
+
+    <span class="doccomment">/// List of webc packages that are explicitly included for execution
+    /// Note: these packages will be used instead of those in the registry
+    </span><span class="attribute">#[clap(long = <span class="string">&quot;include-webc&quot;</span>, name = <span class="string">&quot;WEBC&quot;</span>)]
+    </span>include_webcs: Vec&lt;PathBuf&gt;,
+
+    <span class="doccomment">/// List of injected atoms
+    </span><span class="attribute">#[clap(long = <span class="string">&quot;map-command&quot;</span>, name = <span class="string">&quot;MAPCMD&quot;</span>)]
+    </span>map_commands: Vec&lt;String&gt;,
+
+    <span class="doccomment">/// Enable experimental IO devices
+    </span><span class="attribute">#[cfg(feature = <span class="string">&quot;experimental-io-devices&quot;</span>)]
+    #[cfg_attr(
+        feature = <span class="string">&quot;experimental-io-devices&quot;</span>,
+        clap(long = <span class="string">&quot;enable-experimental-io-devices&quot;</span>)
+    )]
+    </span>enable_experimental_io_devices: bool,
+
+    <span class="doccomment">/// Enable networking with the host network.
+    ///
+    /// Allows WASI modules to open TCP and UDP connections, create sockets, ...
+    </span><span class="attribute">#[clap(long = <span class="string">&quot;net&quot;</span>)]
+    </span><span class="kw">pub </span>networking: bool,
+
+    <span class="doccomment">/// Disables the TTY bridge
+    </span><span class="attribute">#[clap(long = <span class="string">&quot;no-tty&quot;</span>)]
+    </span><span class="kw">pub </span>no_tty: bool,
+
+    <span class="doccomment">/// Enables asynchronous threading
+    </span><span class="attribute">#[clap(long = <span class="string">&quot;enable-async-threads&quot;</span>)]
+    </span><span class="kw">pub </span>enable_async_threads: bool,
+
+    <span class="doccomment">/// Allow instances to send http requests.
+    ///
+    /// Access to domains is granted by default.
+    </span><span class="attribute">#[clap(long)]
+    </span><span class="kw">pub </span>http_client: bool,
+
+    <span class="doccomment">/// Require WASI modules to only import 1 version of WASI.
+    </span><span class="attribute">#[clap(long = <span class="string">&quot;deny-multiple-wasi-versions&quot;</span>)]
+    </span><span class="kw">pub </span>deny_multiple_wasi_versions: bool,
+
+    <span class="doccomment">/// The registry to use.
+    </span><span class="attribute">#[clap(long, env = <span class="string">&quot;WASMER_REGISTRY&quot;</span>, value_parser = parse_registry)]
+    </span><span class="kw">pub </span>registry: <span class="prelude-ty">Option</span>&lt;Url&gt;,
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="kw">impl</span> <span class="ident">Wasi</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">map_dir</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">alias</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">target_on_disk</span>: <span class="ident">PathBuf</span>) {
-        <span class="self">self</span>.<span class="ident">mapped_dirs</span>.<span class="ident">push</span>((<span class="ident">alias</span>.<span class="ident">to_string</span>(), <span class="ident">target_on_disk</span>));
+<span class="kw">pub struct </span>RunProperties {
+    <span class="kw">pub </span>ctx: WasiFunctionEnv,
+    <span class="kw">pub </span>path: PathBuf,
+    <span class="kw">pub </span>invoke: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="kw">pub </span>args: Vec&lt;String&gt;,
+}
+
+<span class="attribute">#[allow(dead_code)]
+</span><span class="kw">impl </span>Wasi {
+    <span class="kw">pub fn </span>map_dir(<span class="kw-2">&amp;mut </span><span class="self">self</span>, alias: <span class="kw-2">&amp;</span>str, target_on_disk: PathBuf) {
+        <span class="self">self</span>.mapped_dirs.push(MappedDirectory {
+            guest: alias.to_string(),
+            host: target_on_disk,
+        });
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_env</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="self">self</span>.<span class="ident">env_vars</span>.<span class="ident">push</span>((<span class="ident">key</span>.<span class="ident">to_string</span>(), <span class="ident">value</span>.<span class="ident">to_string</span>()));
+    <span class="kw">pub fn </span>set_env(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.env_vars.push((key.to_string(), value.to_string()));
     }
 
-    <span class="doccomment">/// Gets the WASI version (if any) for the provided module</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_versions</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">Module</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">WasiVersion</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="comment">// Get the wasi version in strict mode, so no other imports are</span>
-        <span class="comment">// allowed.</span>
-        <span class="ident">get_wasi_versions</span>(<span class="ident">module</span>, <span class="bool-val">true</span>)
+    <span class="doccomment">/// Gets the WASI version (if any) for the provided module
+    </span><span class="kw">pub fn </span>get_versions(module: <span class="kw-2">&amp;</span>Module) -&gt; <span class="prelude-ty">Option</span>&lt;BTreeSet&lt;WasiVersion&gt;&gt; {
+        <span class="comment">// Get the wasi version in non-strict mode, so multiple wasi versions
+        // are potentially allowed.
+        //
+        // Checking for multiple wasi versions is handled outside this function.
+        </span>get_wasi_versions(module, <span class="bool-val">false</span>)
     }
 
-    <span class="doccomment">/// Checks if a given module has any WASI imports at all.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_wasi_imports</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">Module</span>) -&gt; <span class="ident">bool</span> {
-        <span class="comment">// Get the wasi version in non-strict mode, so no other imports</span>
-        <span class="comment">// are allowed</span>
-        <span class="ident">get_wasi_versions</span>(<span class="ident">module</span>, <span class="bool-val">false</span>).<span class="ident">is_some</span>()
+    <span class="doccomment">/// Checks if a given module has any WASI imports at all.
+    </span><span class="kw">pub fn </span>has_wasi_imports(module: <span class="kw-2">&amp;</span>Module) -&gt; bool {
+        <span class="comment">// Get the wasi version in non-strict mode, so no other imports
+        // are allowed
+        </span>get_wasi_versions(module, <span class="bool-val">false</span>).is_some()
     }
 
-    <span class="doccomment">/// Helper function for instantiating a module with Wasi imports for the `Run` command.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">instantiate</span>(
+    <span class="kw">pub fn </span>prepare(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">store</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">AsStoreMut</span>,
-        <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">Module</span>,
-        <span class="ident">program_name</span>: <span class="ident">String</span>,
-        <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">FunctionEnv</span><span class="op">&lt;</span><span class="ident">WasiEnv</span><span class="op">&gt;</span>, <span class="ident">Instance</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">arg</span><span class="op">|</span> <span class="ident">arg</span>.<span class="ident">into_bytes</span>());
+        module: <span class="kw-2">&amp;</span>Module,
+        program_name: String,
+        args: Vec&lt;String&gt;,
+        rt: Arc&lt;<span class="kw">dyn </span>Runtime + Send + Sync&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;WasiEnvBuilder&gt; {
+        <span class="kw">let </span>args = args.into_iter().map(|arg| arg.into_bytes());
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasi_state_builder</span> <span class="op">=</span> <span class="ident">WasiState::new</span>(<span class="ident">program_name</span>);
-        <span class="ident">wasi_state_builder</span>
-            .<span class="ident">args</span>(<span class="ident">args</span>)
-            .<span class="ident">envs</span>(<span class="self">self</span>.<span class="ident">env_vars</span>.<span class="ident">clone</span>())
-            .<span class="ident">preopen_dirs</span>(<span class="self">self</span>.<span class="ident">pre_opened_directories</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>
-            .<span class="ident">map_dirs</span>(<span class="self">self</span>.<span class="ident">mapped_dirs</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+        <span class="kw">let </span>map_commands = <span class="self">self
+            </span>.map_commands
+            .iter()
+            .map(|map| map.split_once(<span class="string">&#39;=&#39;</span>).unwrap())
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect::&lt;HashMap&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;();
 
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;experimental-io-devices&quot;</span>)]</span>
-        {
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">enable_experimental_io_devices</span> {
-                <span class="ident">wasi_state_builder</span>
-                    .<span class="ident">setup_fs</span>(<span class="ident">Box::new</span>(<span class="ident">wasmer_wasi_experimental_io_devices::initialize</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>uses = Vec::new();
+        <span class="kw">for </span>name <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.uses {
+            <span class="kw">let </span>specifier = PackageSpecifier::parse(name)
+                .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;Unable to parse \&quot;{name}\&quot; as a package specifier&quot;</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>pkg = rt
+                .task_manager()
+                .block_on(BinaryPackage::from_registry(<span class="kw-2">&amp;</span>specifier, <span class="kw-2">&amp;*</span>rt))
+                .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;Unable to load \&quot;{name}\&quot;&quot;</span>))<span class="question-mark">?</span>;
+            uses.push(pkg);
+        }
+
+        <span class="kw">let </span>builder = WasiEnv::builder(program_name)
+            .runtime(Arc::clone(<span class="kw-2">&amp;</span>rt))
+            .args(args)
+            .envs(<span class="self">self</span>.env_vars.clone())
+            .uses(uses)
+            .map_commands(map_commands);
+
+        <span class="kw">let </span><span class="kw-2">mut </span>builder = <span class="kw">if </span>wasmer_wasix::is_wasix_module(module) {
+            <span class="comment">// If we preopen anything from the host then shallow copy it over
+            </span><span class="kw">let </span>root_fs = RootFileSystemBuilder::new()
+                .with_tty(Box::new(DeviceFile::new(__WASI_STDIN_FILENO)))
+                .build();
+            <span class="kw">if </span>!<span class="self">self</span>.mapped_dirs.is_empty() {
+                <span class="kw">let </span>fs_backing: Arc&lt;<span class="kw">dyn </span>FileSystem + Send + Sync&gt; =
+                    Arc::new(PassthruFileSystem::new(default_fs_backing()));
+                <span class="kw">for </span>MappedDirectory { host, guest } <span class="kw">in </span><span class="self">self</span>.mapped_dirs.clone() {
+                    <span class="kw">let </span>host = <span class="kw">if </span>!host.is_absolute() {
+                        Path::new(<span class="string">&quot;/&quot;</span>).join(host)
+                    } <span class="kw">else </span>{
+                        host
+                    };
+                    root_fs.mount(guest.into(), <span class="kw-2">&amp;</span>fs_backing, host)<span class="question-mark">?</span>;
+                }
+            }
+
+            <span class="comment">// Open the root of the new filesystem
+            </span>builder
+                .sandbox_fs(root_fs)
+                .preopen_dir(Path::new(<span class="string">&quot;/&quot;</span>))
+                .unwrap()
+                .map_dir(<span class="string">&quot;.&quot;</span>, <span class="string">&quot;/&quot;</span>)<span class="question-mark">?
+        </span>} <span class="kw">else </span>{
+            builder
+                .fs(default_fs_backing())
+                .preopen_dirs(<span class="self">self</span>.pre_opened_directories.clone())<span class="question-mark">?
+                </span>.map_dirs(
+                    <span class="self">self</span>.mapped_dirs
+                        .iter()
+                        .map(|d| (d.guest.clone(), d.host.clone())),
+                )<span class="question-mark">?
+        </span>};
+
+        <span class="kw">if </span><span class="self">self</span>.http_client {
+            <span class="kw">let </span>caps = wasmer_wasix::http::HttpClientCapabilityV1::new_allow_all();
+            builder.capabilities_mut().http_client = caps;
+        }
+
+        builder
+            .capabilities_mut()
+            .threading
+            .enable_asynchronous_threading = <span class="self">self</span>.enable_async_threads;
+
+        <span class="attribute">#[cfg(feature = <span class="string">&quot;experimental-io-devices&quot;</span>)]
+        </span>{
+            <span class="kw">if </span><span class="self">self</span>.enable_experimental_io_devices {
+                wasi_state_builder
+                    .setup_fs(Box::new(wasmer_wasi_experimental_io_devices::initialize));
             }
         }
 
-        <span class="kw">let</span> <span class="ident">wasi_env</span> <span class="op">=</span> <span class="ident">wasi_state_builder</span>.<span class="ident">finalize</span>(<span class="ident">store</span>)<span class="question-mark">?</span>;
-        <span class="ident">wasi_env</span>.<span class="ident">env</span>.<span class="ident">as_mut</span>(<span class="ident">store</span>).<span class="ident">state</span>.<span class="ident">fs</span>.<span class="ident">is_wasix</span>.<span class="ident">store</span>(
-            <span class="ident">is_wasix_module</span>(<span class="ident">module</span>),
-            <span class="ident">std::sync::atomic::Ordering::Release</span>,
-        );
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">import_object</span> <span class="op">=</span> <span class="ident">import_object_for_all_wasi_versions</span>(<span class="ident">store</span>, <span class="kw-2">&amp;</span><span class="ident">wasi_env</span>.<span class="ident">env</span>);
-        <span class="ident">wasi_import_shared_memory</span>(<span class="kw-2">&amp;mut</span> <span class="ident">import_object</span>, <span class="ident">module</span>, <span class="ident">store</span>);
-        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">Instance::new</span>(<span class="ident">store</span>, <span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">import_object</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">exports</span>.<span class="ident">get_memory</span>(<span class="string">&quot;memory&quot;</span>)<span class="question-mark">?</span>;
-        <span class="ident">wasi_env</span>.<span class="ident">data_mut</span>(<span class="ident">store</span>).<span class="ident">set_memory</span>(<span class="ident">memory</span>.<span class="ident">clone</span>());
-        <span class="prelude-val">Ok</span>((<span class="ident">wasi_env</span>.<span class="ident">env</span>, <span class="ident">instance</span>))
+        <span class="prelude-val">Ok</span>(builder)
     }
 
-    <span class="doccomment">/// Helper function for handling the result of a Wasi _start function.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_result</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">Value</span>]<span class="op">&gt;</span>, <span class="ident">RuntimeError</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">result</span> {
-            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(()),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                <span class="kw">let</span> <span class="ident">err</span>: <span class="ident">anyhow::Error</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">err</span>.<span class="ident">downcast</span>::<span class="op">&lt;</span><span class="ident">WasiError</span><span class="op">&gt;</span>() {
-                    <span class="prelude-val">Ok</span>(<span class="ident">WasiError::Exit</span>(<span class="ident">exit_code</span>)) =&gt; {
-                        <span class="comment">// We should exit with the provided exit code</span>
-                        <span class="ident">std::process::exit</span>(<span class="ident">exit_code</span> <span class="kw">as</span> <span class="kw">_</span>);
+    <span class="kw">pub fn </span>prepare_runtime(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        engine: Engine,
+        wasmer_dir: <span class="kw-2">&amp;</span>Path,
+        handle: Handle,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">impl </span>Runtime + Send + Sync&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>rt = PluggableRuntime::new(Arc::new(TokioTaskManager::new(handle)));
+
+        <span class="kw">if </span><span class="self">self</span>.networking {
+            rt.set_networking_implementation(virtual_net::host::LocalNetworking::default());
+        } <span class="kw">else </span>{
+            rt.set_networking_implementation(virtual_net::UnsupportedVirtualNetworking::default());
+        }
+
+        <span class="kw">if </span>!<span class="self">self</span>.no_tty {
+            <span class="kw">let </span>tty = Arc::new(SysTty::default());
+            tty.reset();
+            rt.set_tty(tty);
+        }
+
+        <span class="kw">let </span>client =
+            wasmer_wasix::http::default_http_client().context(<span class="string">&quot;No HTTP client available&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>client = Arc::new(client);
+
+        <span class="kw">let </span>package_loader = <span class="self">self
+            </span>.prepare_package_loader(wasmer_dir, client.clone())
+            .context(<span class="string">&quot;Unable to prepare the package loader&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>registry = <span class="self">self</span>.prepare_source(wasmer_dir, client)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>cache_dir = FileSystemCache::default_cache_dir(wasmer_dir);
+        <span class="kw">let </span>module_cache = wasmer_wasix::runtime::module_cache::in_memory()
+            .with_fallback(FileSystemCache::new(cache_dir));
+
+        rt.set_package_loader(package_loader)
+            .set_module_cache(module_cache)
+            .set_source(registry)
+            .set_engine(<span class="prelude-val">Some</span>(engine));
+
+        <span class="prelude-val">Ok</span>(rt)
+    }
+
+    <span class="doccomment">/// Helper function for instantiating a module with Wasi imports for the `Run` command.
+    </span><span class="kw">pub fn </span>instantiate(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        module: <span class="kw-2">&amp;</span>Module,
+        program_name: String,
+        args: Vec&lt;String&gt;,
+        runtime: Arc&lt;<span class="kw">dyn </span>Runtime + Send + Sync&gt;,
+        store: <span class="kw-2">&amp;mut </span>Store,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(WasiFunctionEnv, Instance)&gt; {
+        <span class="kw">let </span>builder = <span class="self">self</span>.prepare(module, program_name, args, runtime)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(instance, wasi_env) = builder.instantiate(module.clone(), store)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>((wasi_env, instance))
+    }
+
+    <span class="comment">// Runs the Wasi process
+    </span><span class="kw">pub fn </span>run(run: RunProperties, store: Store) -&gt; <span class="prelude-ty">Result</span>&lt;i32&gt; {
+        <span class="kw">let </span>tasks = run.ctx.data(<span class="kw-2">&amp;</span>store).tasks().clone();
+
+        <span class="comment">// The return value is passed synchronously and will block until the result is returned
+        // this is because the main thread can go into a deep sleep and exit the dedicated thread
+        </span><span class="kw">let </span>(tx, rx) = std::sync::mpsc::channel();
+
+        <span class="comment">// We run it in a blocking thread as the WASM function may otherwise hold
+        // up the IO operations
+        </span>tasks.task_dedicated(Box::new(<span class="kw">move </span>|| {
+            <span class="self">Self</span>::run_with_deep_sleep(run, store, tx, <span class="prelude-val">None</span>);
+        }))<span class="question-mark">?</span>;
+        rx.recv()
+            .expect(<span class="string">&quot;main thread terminated without a result, this normally means a panic occurred within the main thread&quot;</span>)
+    }
+
+    <span class="comment">// Runs the Wasi process (asynchronously)
+    </span><span class="kw">pub fn </span>run_with_deep_sleep(
+        run: RunProperties,
+        <span class="kw-2">mut </span>store: Store,
+        tx: Sender&lt;<span class="prelude-ty">Result</span>&lt;i32&gt;&gt;,
+        rewind_state: <span class="prelude-ty">Option</span>&lt;(RewindState, Bytes)&gt;,
+    ) {
+        <span class="comment">// If we need to rewind then do so
+        </span><span class="kw">let </span>ctx = run.ctx;
+        <span class="kw">if let </span><span class="prelude-val">Some</span>((rewind_state, rewind_result)) = rewind_state {
+            <span class="kw">if </span>rewind_state.is_64bit {
+                <span class="kw">let </span>res = rewind_ext::&lt;Memory64&gt;(
+                    ctx.env.clone().into_mut(<span class="kw-2">&amp;mut </span>store),
+                    rewind_state.memory_stack,
+                    rewind_state.rewind_stack,
+                    rewind_state.store_data,
+                    rewind_result,
+                );
+                <span class="kw">if </span>res != Errno::Success {
+                    tx.send(<span class="prelude-val">Ok</span>(res <span class="kw">as </span>i32)).ok();
+                    <span class="kw">return</span>;
+                }
+            } <span class="kw">else </span>{
+                <span class="kw">let </span>res = rewind_ext::&lt;Memory32&gt;(
+                    ctx.env.clone().into_mut(<span class="kw-2">&amp;mut </span>store),
+                    rewind_state.memory_stack,
+                    rewind_state.rewind_stack,
+                    rewind_state.store_data,
+                    rewind_result,
+                );
+                <span class="kw">if </span>res != Errno::Success {
+                    tx.send(<span class="prelude-val">Ok</span>(res <span class="kw">as </span>i32)).ok();
+                    <span class="kw">return</span>;
+                }
+            }
+        }
+
+        <span class="comment">// Get the instance from the environment
+        </span><span class="kw">let </span>instance = <span class="kw">match </span>ctx.data(<span class="kw-2">&amp;</span>store).try_clone_instance() {
+            <span class="prelude-val">Some</span>(inst) =&gt; inst,
+            <span class="prelude-val">None </span>=&gt; {
+                tx.send(<span class="prelude-val">Ok</span>(Errno::Noexec <span class="kw">as </span>i32)).ok();
+                <span class="kw">return</span>;
+            }
+        };
+
+        <span class="comment">// Do we want to invoke a function?
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>invoke) = run.invoke {
+            <span class="kw">let </span>res = RunWithPathBuf::inner_module_invoke_function(
+                <span class="kw-2">&amp;mut </span>store,
+                <span class="kw-2">&amp;</span>instance,
+                run.path.as_path(),
+                invoke,
+                <span class="kw-2">&amp;</span>run.args,
+            )
+            .map(|()| <span class="number">0</span>);
+
+            ctx.cleanup(<span class="kw-2">&amp;mut </span>store, <span class="prelude-val">None</span>);
+
+            tx.send(res).unwrap();
+        } <span class="kw">else </span>{
+            <span class="kw">let </span>start: Function =
+                RunWithPathBuf::try_find_function(<span class="kw-2">&amp;</span>instance, run.path.as_path(), <span class="string">&quot;_start&quot;</span>, <span class="kw-2">&amp;</span>[])
+                    .unwrap();
+
+            <span class="kw">let </span>result = start.call(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>[]);
+            <span class="self">Self</span>::handle_result(
+                RunProperties {
+                    ctx,
+                    path: run.path,
+                    invoke: run.invoke,
+                    args: run.args,
+                },
+                store,
+                result,
+                tx,
+            )
+        }
+    }
+
+    <span class="doccomment">/// Helper function for handling the result of a Wasi _start function.
+    </span><span class="kw">pub fn </span>handle_result(
+        run: RunProperties,
+        <span class="kw-2">mut </span>store: Store,
+        result: <span class="prelude-ty">Result</span>&lt;Box&lt;[Value]&gt;, RuntimeError&gt;,
+        tx: Sender&lt;<span class="prelude-ty">Result</span>&lt;i32&gt;&gt;,
+    ) {
+        <span class="kw">let </span>ctx = run.ctx;
+        <span class="kw">let </span>ret: <span class="prelude-ty">Result</span>&lt;i32&gt; = <span class="kw">match </span>result {
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="number">0</span>),
+            <span class="prelude-val">Err</span>(err) =&gt; {
+                <span class="kw">match </span>err.downcast::&lt;WasiError&gt;() {
+                    <span class="prelude-val">Ok</span>(WasiError::Exit(exit_code)) =&gt; <span class="prelude-val">Ok</span>(exit_code.raw()),
+                    <span class="prelude-val">Ok</span>(WasiError::DeepSleep(deep)) =&gt; {
+                        <span class="kw">let </span>pid = ctx.data(<span class="kw-2">&amp;</span>store).pid();
+                        <span class="kw">let </span>tid = ctx.data(<span class="kw-2">&amp;</span>store).tid();
+                        <span class="macro">tracing::trace!</span>(%pid, %tid, <span class="string">&quot;entered a deep sleep&quot;</span>);
+
+                        <span class="comment">// Create the respawn function
+                        </span><span class="kw">let </span>tasks = ctx.data(<span class="kw-2">&amp;</span>store).tasks().clone();
+                        <span class="kw">let </span>rewind = deep.rewind;
+                        <span class="kw">let </span>respawn = {
+                            <span class="kw">let </span>path = run.path;
+                            <span class="kw">let </span>invoke = run.invoke;
+                            <span class="kw">let </span>args = run.args;
+                            <span class="kw">move </span>|ctx, store, res| {
+                                <span class="kw">let </span>run = RunProperties {
+                                    ctx,
+                                    path,
+                                    invoke,
+                                    args,
+                                };
+                                <span class="self">Self</span>::run_with_deep_sleep(run, store, tx, <span class="prelude-val">Some</span>((rewind, res)));
+                            }
+                        };
+
+                        <span class="comment">// Spawns the WASM process after a trigger
+                        </span><span class="kw">unsafe </span>{
+                            tasks.resume_wasm_after_poller(
+                                Box::new(respawn),
+                                ctx,
+                                store,
+                                deep.trigger,
+                            )
+                        }
+                        .unwrap();
+                        <span class="kw">return</span>;
                     }
-                    <span class="prelude-val">Ok</span>(<span class="ident">err</span>) =&gt; <span class="ident">err</span>.<span class="ident">into</span>(),
-                    <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="ident">err</span>.<span class="ident">into</span>(),
-                };
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>)
+                    <span class="prelude-val">Ok</span>(err) =&gt; <span class="prelude-val">Err</span>(err.into()),
+                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(err.into()),
+                }
             }
-        }
+        };
+
+        ctx.cleanup(<span class="kw-2">&amp;mut </span>store, <span class="prelude-val">None</span>);
+
+        tx.send(ret).unwrap();
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">for_binfmt_interpreter</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">std::env</span>;
-        <span class="kw">let</span> <span class="ident">dir</span> <span class="op">=</span> <span class="ident">env::var_os</span>(<span class="string">&quot;WASMER_BINFMT_MISC_PREOPEN&quot;</span>)
-            .<span class="ident">map</span>(<span class="ident">Into::into</span>)
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">PathBuf::from</span>(<span class="string">&quot;.&quot;</span>));
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">deny_multiple_wasi_versions</span>: <span class="bool-val">true</span>,
-            <span class="ident">env_vars</span>: <span class="ident">env::vars</span>().<span class="ident">collect</span>(),
-            <span class="ident">pre_opened_directories</span>: <span class="macro">vec!</span>[<span class="ident">dir</span>],
-            ..<span class="ident"><span class="self">Self</span>::default</span>()
+    <span class="kw">pub fn </span>for_binfmt_interpreter() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">use </span>std::env;
+        <span class="kw">let </span>dir = env::var_os(<span class="string">&quot;WASMER_BINFMT_MISC_PREOPEN&quot;</span>)
+            .map(Into::into)
+            .unwrap_or_else(|| PathBuf::from(<span class="string">&quot;.&quot;</span>));
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            deny_multiple_wasi_versions: <span class="bool-val">true</span>,
+            env_vars: env::vars().collect(),
+            pre_opened_directories: <span class="macro">vec!</span>[dir],
+            ..<span class="self">Self</span>::default()
         })
     }
+
+    <span class="kw">fn </span>prepare_package_loader(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        wasmer_dir: <span class="kw-2">&amp;</span>Path,
+        client: Arc&lt;<span class="kw">dyn </span>HttpClient + Send + Sync&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">impl </span>PackageLoader + Send + Sync&gt; {
+        <span class="kw">let </span>checkout_dir = BuiltinPackageLoader::default_cache_dir(wasmer_dir);
+        <span class="kw">let </span>loader = BuiltinPackageLoader::new_with_client(checkout_dir, Arc::new(client));
+        <span class="prelude-val">Ok</span>(loader)
+    }
+
+    <span class="kw">fn </span>prepare_source(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        wasmer_dir: <span class="kw-2">&amp;</span>Path,
+        client: Arc&lt;<span class="kw">dyn </span>HttpClient + Send + Sync&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">impl </span>Source + Send + Sync&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>source = MultiSource::new();
+
+        <span class="comment">// Note: This should be first so our &quot;preloaded&quot; sources get a chance to
+        // override the main registry.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>preloaded = InMemorySource::new();
+        <span class="kw">for </span>path <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.include_webcs {
+            preloaded
+                .add_webc(path)
+                .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;Unable to load \&quot;{}\&quot;&quot;</span>, path.display()))<span class="question-mark">?</span>;
+        }
+        source.add_source(preloaded);
+
+        <span class="kw">let </span>graphql_endpoint = <span class="self">self</span>.graphql_endpoint(wasmer_dir)<span class="question-mark">?</span>;
+        source.add_source(WapmSource::new(graphql_endpoint, Arc::clone(<span class="kw-2">&amp;</span>client)));
+
+        <span class="kw">let </span>cache_dir = WebSource::default_cache_dir(wasmer_dir);
+        source.add_source(WebSource::new(cache_dir, client));
+
+        source.add_source(FileSystemSource::default());
+
+        <span class="prelude-val">Ok</span>(source)
+    }
+
+    <span class="kw">fn </span>graphql_endpoint(<span class="kw-2">&amp;</span><span class="self">self</span>, wasmer_dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;Url&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(endpoint) = <span class="kw-2">&amp;</span><span class="self">self</span>.registry {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(endpoint.clone());
+        }
+
+        <span class="kw">let </span>config =
+            wasmer_registry::WasmerConfig::from_file(wasmer_dir).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+        <span class="kw">let </span>graphql_endpoint = config.registry.get_graphql_url();
+        <span class="kw">let </span>graphql_endpoint = graphql_endpoint
+            .parse()
+            .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;Unable to parse \&quot;{graphql_endpoint}\&quot; as a URL&quot;</span>))<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(graphql_endpoint)
+    }
+}
+
+<span class="kw">fn </span>parse_registry(r: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Url&gt; {
+    <span class="kw">let </span>url = wasmer_registry::format_graphql(r).parse()<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(url)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="wasmer_cli" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="wasmer_cli" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

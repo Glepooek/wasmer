@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Wasi","WASI Options"]]};
+window.SIDEBAR_ITEMS = {"fn":[["parse_registry",""]],"struct":[["RunProperties",""],["Wasi","WASI Options"]]};
