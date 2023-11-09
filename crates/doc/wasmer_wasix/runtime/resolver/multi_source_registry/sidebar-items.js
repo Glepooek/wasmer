@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["MultiSource","A [`Source`] that works by querying multiple [`Source`]s in succession."]]};

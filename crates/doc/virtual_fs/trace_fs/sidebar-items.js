@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["TraceFile",""],["TraceFileSystem","A [`FileSystem`] wrapper that will automatically log all operations at the `trace` level."]]};
+window.SIDEBAR_ITEMS = {"static":["META","__CALLSITE"],"struct":["TraceFile","TraceFileSystem"]};
